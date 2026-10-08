@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "settings": { ".read": true, ".write": "auth != null && auth.token.email === 'admin@salonbooking.local'" },
+    "services": { ".read": true, ".write": "auth != null && auth.token.email === 'admin@salonbooking.local'" },
+    "gallery": { ".read": true, ".write": "auth != null && auth.token.email === 'admin@salonbooking.local'" },
+    "slots": {
+      ".read": true,
+      "$key": {
+        ".write": "(auth != null && auth.token.email === 'admin@salonbooking.local') || (auth != null && newData.isString() && newData.val().beginsWith(auth.uid + '|') && (!data.exists() || data.val() === newData.val())) || (auth != null && data.exists() && !newData.exists() && data.val().beginsWith(auth.uid + '|'))"
+      }
+    },
+    "bookings": {
+      ".read": "(auth != null && auth.token.email === 'admin@salonbooking.local') || (auth != null && query.orderByChild === 'uid' && query.equalTo === auth.uid)",
+      ".indexOn": ["uid"],
+      "$id": {
+        ".validate": "newData.hasChildren(['uid', 'name', 'email', 'phone', 'service', 'date', 'time', 'status']) && newData.child('status').val().matches(/^(Pending|Confirmed|Completed|Cancelled)$/)",
+        ".write": "(auth != null && auth.token.email === 'admin@salonbooking.local') || (auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid && newData.child('status').val() === 'Confirmed') || (data.exists() && newData.exists() && data.child('uid').val() === auth.uid && newData.child('uid').val() === auth.uid && newData.child('date').val() === data.child('date').val() && newData.child('time').val() === data.child('time').val() && newData.child('price').val() === data.child('price').val() && (newData.child('status').val() === data.child('status').val() || newData.child('status').val() === 'Cancelled'))))"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.token.email === 'admin@salonbooking.local')",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'admin@salonbooking.local')"
+      }
+    }
+  }
+}

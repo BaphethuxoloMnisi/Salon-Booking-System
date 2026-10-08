@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Log in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;500&family=Figtree:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <nav id="nav"></nav>
+    <section>
+      <div class="wrap">
+        <div class="auth">
+          <div class="tabs">
+            <button data-t="log">Log in</button
+            ><button data-t="reg">Register</button>
+          </div>
+          <form class="pane form one" id="log">
+            <div>
+              <label for="lu">Username</label
+              ><input id="lu" autocomplete="username" required />
+            </div>
+            <div>
+              <label for="lp">Password</label
+              ><input
+                id="lp"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+            <p class="err" id="lerr" role="alert"></p>
+            <button class="btn">Log in</button>
+          </form>
+          <form class="pane form one" id="reg">
+            <div>
+              <label for="rn">Full name</label
+              ><input id="rn" autocomplete="name" required />
+            </div>
+            <div>
+              <label for="re">Email</label
+              ><input id="re" type="email" autocomplete="email" required />
+            </div>
+            <div>
+              <label for="rph">Phone</label
+              ><input id="rph" type="tel" autocomplete="tel" required />
+            </div>
+            <div>
+              <label for="ru">Username</label
+              ><input id="ru" autocomplete="username" required />
+            </div>
+            <div>
+              <label for="rp">Password</label
+              ><input
+                id="rp"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+            </div>
+            <div>
+              <label for="rc">Confirm password</label
+              ><input
+                id="rc"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+            </div>
+            <p class="err" id="rerr" role="alert"></p>
+            <button class="btn">Create account</button>
+          </form>
+        </div>
+      </div>
+    </section>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/login.js"></script>
+  </body>
+</html>
