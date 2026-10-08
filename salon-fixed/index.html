@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Salon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@400;500&family=Figtree:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <nav>
+      <div class="wrap">
+        <a class="logo" href="#top" id="brand"></a>
+        <div>
+          <a href="#services">Services</a><a href="#gallery">Gallery</a
+          ><a href="#book">Book</a>
+        </div>
+      </div>
+    </nav>
+    <section class="hero" id="top">
+      <div class="wrap">
+        <div>
+          <h1 id="h1"></h1>
+          <p id="tag"></p>
+          <a class="btn" href="#book">Book an appointment</a>
+        </div>
+        <div class="arch" id="hero"></div>
+      </div>
+    </section>
+    <section class="mist" id="services">
+      <div class="wrap">
+        <h2>Services</h2>
+        <div class="grid" id="svcs"></div>
+      </div>
+    </section>
+    <section id="gallery">
+      <div class="wrap">
+        <h2>Inside the studio</h2>
+        <div class="gal" id="gal"></div>
+      </div>
+    </section>
+    <section class="mist" id="book">
+      <div class="wrap">
+        <h2>Book your visit</h2>
+        <div class="form">
+          <div>
+            <label for="name">Full name</label
+            ><input id="name" autocomplete="name" />
+          </div>
+          <div>
+            <label for="email">Email</label
+            ><input id="email" type="email" autocomplete="email" />
+          </div>
+          <div>
+            <label for="phone">Phone</label
+            ><input id="phone" type="tel" autocomplete="tel" />
+          </div>
+          <div>
+            <label for="svc">Service</label
+            ><select id="svc"></select>
+          </div>
+          <div>
+            <label for="date">Date</label><input id="date" type="date" />
+          </div>
+          <div>
+            <label>Time</label>
+            <div class="slots" id="slots"></div>
+          </div>
+          <div class="full">
+            <label for="notes">Notes (optional)</label
+            ><textarea id="notes" rows="3"></textarea>
+          </div>
+          <div class="full">
+            <p class="err" id="err" role="alert"></p>
+            <button class="btn" id="go">Confirm booking</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer>
+      <p id="foot"></p>
+      <p><a href="admin.html">Staff login</a></p>
+    </footer>
+    <div class="modal" id="m">
+      <div class="card" role="dialog" aria-modal="true">
+        <h3>Booking confirmed</h3>
+        <p>Keep this receipt for your records.</p>
+        <div id="rc"></div>
+        <div class="acts">
+          <button class="btn" id="dl">Download receipt</button
+          ><button class="btn ghost" id="cl">Close</button>
+        </div>
+      </div>
+    </div>
+    <script src="js/common.js"></script>
+    <script src="js/index.js"></script>
+  </body>
+</html>
