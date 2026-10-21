@@ -1,46 +1,34 @@
-ready.then(() => {
-  renderNav();
-  const params = new URLSearchParams(location.search);
+const params = new URLSearchParams(location.search);
 
-  function showTab(name) {
-    $$(".pane").forEach((p) => (p.hidden = p.id !== name));
-    $$(".tabs button").forEach((b) =>
-      b.classList.toggle("on", b.dataset.t === name),
-    );
+// Tab buttons are plain links to the other page (works before Firebase finishes loading)
+$$(".tabs button[data-go]").forEach(
+  (b) =>
+    (b.onclick = () =>
+      (location.href = b.dataset.go + (params.get("next") ? "?next=" + encodeURIComponent(params.get("next")) : ""))),
+);
+
+function goHome(session) {
+  if (session.role === "admin") return (location.href = "admin.html");
+  const next = params.get("next");
+  location.href = unseenMoves(session)
+    ? "account.html"
+    : next && next !== "admin.html"
+      ? next
+      : "index.html";
+}
+
+// Attached immediately so a fast click can never reload the page with the password in the URL
+$("#log").onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await ready;
+  } catch {
+    return ($("#lerr").textContent = "Cannot reach the server. Please try again.");
   }
-  $$(".tabs button").forEach((b) => (b.onclick = () => showTab(b.dataset.t)));
-  showTab(params.get("tab") === "register" ? "reg" : "log");
+  const session = await Auth.login($("#lu").value, $("#lp").value);
+  if (!session) return ($("#lerr").textContent = "Wrong username or password.");
+  goHome(session);
+};
 
-  function goHome(session) {
-    if (session.role === "admin") return (location.href = "admin.html");
-    const next = params.get("next");
-    location.href = unseenMoves(session)
-      ? "account.html"
-      : next && next !== "admin.html"
-        ? next
-        : "index.html";
-  }
-
-  $("#log").onsubmit = async (e) => {
-    e.preventDefault();
-    const session = await Auth.login($("#lu").value, $("#lp").value);
-    if (!session)
-      return ($("#lerr").textContent = "Wrong username or password.");
-    goHome(session);
-  };
-
-  $("#reg").onsubmit = async (e) => {
-    e.preventDefault();
-    const f = {
-      name: $("#rn").value,
-      email: $("#re").value,
-      phone: $("#rph").value,
-      user: $("#ru").value,
-      pass: $("#rp").value,
-      confirm: $("#rc").value,
-    };
-    const error = await Auth.register(f);
-    if (error) return ($("#rerr").textContent = error);
-    goHome(await Auth.login(f.user, f.pass));
-  };
-});
+publicReady.then(renderNav).catch(() => {});
+ready.then(renderNav).catch(() => {});

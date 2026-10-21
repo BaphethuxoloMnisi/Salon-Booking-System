@@ -97,8 +97,8 @@ const esc = (s) =>
         c
       ],
   );
-const IMG = (src, alt = "") =>
-  `<img src="${src}" alt="${esc(alt)}" loading="lazy" onerror="this.removeAttribute('src')">`;
+const IMG = (src, alt = "", eager = false) =>
+  `<img src="${src}" alt="${esc(alt)}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} onerror="this.removeAttribute('src')">`;
 function seed() {
   if (!DB.get("services"))
     DB.set("services", [
@@ -301,7 +301,7 @@ function renderNav() {
         ];
   const auth = me
     ? `<a href="#" id="out">Log out (${esc(me.user)})</a>`
-    : `<a href="login.html">Log in</a><a class="btn sm" href="login.html?tab=register">Register</a>`;
+    : `<a href="login.html">Log in</a><a class="btn sm" href="register.html">Register</a>`;
   $("#nav").innerHTML =
     `<div class="wrap"><a class="logo" href="index.html">${esc(name)}</a>
     <button class="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -324,36 +324,100 @@ function renderNav() {
     };
 }
 
-/* ---------- Boot: connect, load, then run the page ---------- */
+/* ---------- Boot: paint from cache, load in parallel, then run the page ----------
+   publicReady : public content (settings, services, gallery) is available. Instant on repeat visits
+                 because the last copy is cached in localStorage; Firebase then refreshes it live.
+   ready       : everything, including the signed-in user, slots and bookings. */
+const CACHE_KEY = "sl_public_cache_v1",
+  PUBLIC = ["settings", "services", "gallery"];
+const loadCache = () => {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (!c || !c.settings) return false;
+    PUBLIC.forEach((k) => c[k] != null && (cache[k] = c[k]));
+    return true;
+  } catch {
+    return false;
+  }
+};
+const saveCache = () => {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify(
+        Object.fromEntries(PUBLIC.filter((k) => cache[k] != null).map((k) => [k, cache[k]])),
+      ),
+    );
+  } catch {
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+  }
+};
+let bootFailed = false;
+function bootFail(e) {
+  console.error(e);
+  if (bootFailed) return;
+  bootFailed = true;
+  document.body.insertAdjacentHTML("afterbegin", `<div class="demo" style="background:#f2d4d4">Cannot connect to Firebase (${esc(e.message)}). Check js/firebase-config.js and the Realtime Database URL.</div>`);
+}
+const withTimeout = (p) =>
+  Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out waiting for the database")), 10000))]);
+
+const hadCache = loadCache();
+// Subscribe to a node; resolves on its first snapshot, then keeps the cache live.
+function listen(ref) {
+  return new Promise((resolve) => {
+    let first = true;
+    ref.on("value", (snap) => {
+      const k = snap.ref.key, v = snap.val();
+      v == null ? delete cache[k] : (cache[k] = v);
+      if (PUBLIC.includes(k)) saveCache();
+      if (first) {
+        first = false;
+        resolve();
+        // without a cached copy the page has not drawn yet; with one, the fresh data must redraw it
+        if (!(hadCache && PUBLIC.includes(k))) return;
+      }
+      listeners.forEach((fn) => fn());
+    }, (err) => { console.error("Firebase read failed:", err); resolve(); });
+  });
+}
+
+let initError = null,
+  publicLoaded,
+  slotsLoaded;
+try {
+  firebase.initializeApp(firebaseConfig);
+  rdb = firebase.database();
+  auth = firebase.auth();
+  // Public data does not need a login, so start it now, in parallel with the auth check
+  publicLoaded = Promise.all(PUBLIC.map((k) => listen(rdb.ref(k))));
+  slotsLoaded = listen(rdb.ref("slots"));
+} catch (e) {
+  initError = e;
+  publicLoaded = slotsLoaded = Promise.reject(e);
+  publicLoaded.catch(() => {});
+}
+
+const publicReady = hadCache && !initError ? Promise.resolve() : withTimeout(publicLoaded);
+publicReady.catch(bootFail);
+
 const ready = (async () => {
   try {
-    firebase.initializeApp(firebaseConfig);
-    rdb = firebase.database();
-    auth = firebase.auth();
-    // Wait for Firebase to restore the signed-in user before reading anything
+    if (initError) throw initError;
+    // Wait for Firebase to restore the signed-in user
     const fbUser = await new Promise((resolve) => {
       const off = auth.onAuthStateChanged((u) => { off(); resolve(u); });
     });
     let me = Auth.me();
     if (!fbUser) { localStorage.removeItem("sl_session"); me = null; }
     else if (!me || me.uid !== fbUser.uid) me = Auth.start(await Auth.profile(fbUser));
-    const nodes = [rdb.ref("settings"), rdb.ref("services"), rdb.ref("gallery"), rdb.ref("slots")];
-    if (me && me.role === "admin") nodes.push(rdb.ref("bookings"));
-    else if (me) nodes.push(rdb.ref("bookings").orderByChild("uid").equalTo(me.uid));
-    const loaded = Promise.all(nodes.map((n) => new Promise((resolve) => {
-      let first = true;
-      n.on("value", (snap) => {
-        const k = snap.ref.key, v = snap.val();
-        v == null ? delete cache[k] : (cache[k] = v);
-        if (first) { first = false; resolve(); } else listeners.forEach((fn) => fn());
-      }, (err) => { console.error("Firebase read failed:", err); resolve(); });
-    })));
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Timed out waiting for the database")), 10000));
-    await Promise.race([loaded, timeout]);
+    let bookingsLoaded = Promise.resolve();
+    if (me && me.role === "admin") bookingsLoaded = listen(rdb.ref("bookings"));
+    else if (me) bookingsLoaded = listen(rdb.ref("bookings").orderByChild("uid").equalTo(me.uid));
+    await withTimeout(Promise.all([publicLoaded, slotsLoaded, bookingsLoaded]));
     if (!DB.get("settings") && me && me.role === "admin") seed();
   } catch (e) {
-    console.error(e);
-    document.body.insertAdjacentHTML("afterbegin", `<div class="demo" style="background:#f2d4d4">Cannot connect to Firebase (${esc(e.message)}). Check js/firebase-config.js and the Realtime Database URL.</div>`);
+    bootFail(e);
     throw e;
   }
 })();

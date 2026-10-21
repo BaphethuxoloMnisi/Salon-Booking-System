@@ -1,42 +1,49 @@
+/* Part 1: public content. Draws as soon as publicReady resolves (instant from cache). */
+publicReady.then(() => {
+  renderNav();
+  // only touch the DOM when the markup changed, so live refreshes never flicker or reset inputs
+  const set = (sel, html) => {
+    const el = $(sel);
+    if (el.dataset.h !== html) {
+      el.dataset.h = html;
+      el.innerHTML = html;
+    }
+  };
+  function paint() {
+    const S = DB.get("settings", {}),
+      SV = DB.get("services", []);
+    document.title = S.name || "Salon";
+    $("#h1").textContent = S.name || "";
+    $("#tag").textContent = S.tagline || "";
+    $("#foot").textContent = "© " + new Date().getFullYear() + " " + (S.name || "");
+    set("#hero", IMG(S.hero, "Salon", true));
+    set("#aboutImg", IMG(U("1521590832167-7bcbfaa6381f"), "Salon interior"));
+    set(
+      "#svcs",
+      SV.map(
+        (s) =>
+          `<article class="svc"><div class="ph">${IMG(s.img, s.name)}</div><h3>${esc(s.name)}</h3><p class="meta">${money(s.price)} · ${s.mins} min</p><p>${esc(s.desc)}</p></article>`,
+      ).join("") || '<p class="empty">No services yet.</p>',
+    );
+    set("#gal", DB.get("gallery", []).map((g) => IMG(g.img, "Salon photo")).join(""));
+    const chosen = $("#svc").value;
+    set(
+      "#svc",
+      SV.map((s) => `<option value="${s.id}">${esc(s.name)} — ${money(s.price)}</option>`).join(""),
+    );
+    if (chosen) $("#svc").value = chosen;
+  }
+  paint();
+  onLive(paint);
+}).catch(() => {});
+
+/* Part 2: booking. Needs the signed-in user, slots and bookings, so it waits for everything. */
 ready.then(() => {
   renderNav();
-  const S = DB.get("settings"),
-    SV = DB.get("services", []),
-    me = Auth.me();
-  const TIMES = [
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-  ];
+  const me = Auth.me();
+  const TIMES = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
   let sel = "",
     last;
-
-  document.title = S.name;
-  $("#h1").textContent = S.name;
-  $("#tag").textContent = S.tagline;
-  $("#foot").textContent = "© " + new Date().getFullYear() + " " + S.name;
-  $("#hero").innerHTML = IMG(S.hero, "Salon");
-  $("#aboutImg").innerHTML = IMG(
-    U("1521590832167-7bcbfaa6381f"),
-    "Salon interior",
-  );
-  $("#svcs").innerHTML =
-    SV.map(
-      (s) =>
-        `<article class="svc"><div class="ph">${IMG(s.img, s.name)}</div><h3>${esc(s.name)}</h3><p class="meta">${money(s.price)} · ${s.mins} min</p><p>${esc(s.desc)}</p></article>`,
-    ).join("") || '<p class="empty">No services yet.</p>';
-  $("#gal").innerHTML = DB.get("gallery", [])
-    .map((g) => IMG(g.img, "Salon photo"))
-    .join("");
-  $("#svc").innerHTML = SV.map(
-    (s) =>
-      `<option value="${s.id}">${esc(s.name)} — ${money(s.price)}</option>`,
-  ).join("");
 
   // Booking needs a customer account
   const customer = me && me.role === "customer";
@@ -58,7 +65,7 @@ ready.then(() => {
   const view = new Date();
   view.setDate(1);
   function dayInfo(iso) {
-    const S = DB.get("settings"),
+    const S = DB.get("settings", {}),
       max = S.maxPerDay ?? 2,
       open = S.openDays ?? [1, 2, 3, 4, 5, 6];
     if (iso < today()) return "past";
@@ -142,7 +149,7 @@ ready.then(() => {
     if (!d.value || d.value < today())
       return (e.textContent = "Choose a date from today onward.");
     if (!sel) return (e.textContent = "Choose an available time.");
-    const s = SV.find((x) => x.id === v("svc")),
+    const s = DB.get("services", []).find((x) => x.id === v("svc")),
       all = DB.get("bookings", []);
     if (!s) return (e.textContent = "Choose a service.");
     if (
